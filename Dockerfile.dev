@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────
+# Dockerfile.dev — Development environment
+# Hot reload via volume mounts (see docker-compose.yml)
+# ─────────────────────────────────────────────────────────────
+
+FROM node:22-alpine
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copy manifests and install ALL dependencies (including devDependencies)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Source code is mounted via docker-compose volumes — no COPY needed.
+# We only copy .env so `next dev` picks it up if the volume mount
+# doesn't include it.
+COPY .env* ./
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+EXPOSE 3000
+
+# Start the dev server with Turbopack
+CMD ["npm", "run", "dev"]

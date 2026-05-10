@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────────────
+# docker-compose.yml — realtime-dashboard
+#
+# Usage:
+#   Production:  docker compose --profile prod up --build -d
+#   Development: docker compose --profile dev up
+#   Stop:        docker compose --profile prod down
+#                docker compose --profile dev down
+# ─────────────────────────────────────────────────────────────
+
+# ─── Shared environment variables ────────────────────────────
+x-env: &shared-env
+  NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Analytics}
+  NEXT_PUBLIC_POLL_INTERVAL_ACTIVITY: ${NEXT_PUBLIC_POLL_INTERVAL_ACTIVITY:-3000}
+  NEXT_PUBLIC_POLL_INTERVAL_PERFORMANCE: ${NEXT_PUBLIC_POLL_INTERVAL_PERFORMANCE:-3000}
+  NEXT_PUBLIC_POLL_INTERVAL_REVENUE: ${NEXT_PUBLIC_POLL_INTERVAL_REVENUE:-10000}
+  NEXT_PUBLIC_POLL_INTERVAL_OVERVIEW: ${NEXT_PUBLIC_POLL_INTERVAL_OVERVIEW:-15000}
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # PRODUCTION — multi-stage build, standalone output
+  # ═══════════════════════════════════════════════════════════
+  app:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        <<: *shared-env
+    image: realtime-dashboard:latest
+    container_name: dashboard-prod
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+    env_file:
+      - path: .env.production
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => { if (!r.ok) throw r.status; process.exit(0); }).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    networks:
+      - dashboard-net
+
+  # ═══════════════════════════════════════════════════════════
+  # DEVELOPMENT — hot reload, volume-mounted source
+  # ═══════════════════════════════════════════════════════════
+  app-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dashboard-dev
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      <<: *shared-env
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"  # Required for file watching in Docker on Windows/Mac
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:cached
+      - ./public:/app/public:cached
+      - ./middleware.ts:/app/middleware.ts:cached
+      - ./next.config.ts:/app/next.config.ts:cached
+      - ./tailwind.config.ts:/app/tailwind.config.ts:cached
+      - ./postcss.config.mjs:/app/postcss.config.mjs:cached
+      - ./tsconfig.json:/app/tsconfig.json:cached
+      # Anonymous volume to prevent host node_modules from overriding container's
+      - /app/node_modules
+      # Persist Next.js cache across restarts for faster rebuilds
+      - nextjs-cache:/app/.next
+    restart: unless-stopped
+    networks:
+      - dashboard-net
+
+networks:
+  dashboard-net:
+    driver: bridge
+
+volumes:
+  nextjs-cache:
+    driver: local

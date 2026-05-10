@@ -1,0 +1,48 @@
+# ── Dependencies ──────────────────────────────────────
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Build output ──────────────────────────────────────
+.next
+out
+build
+dist
+
+# ── Version control ──────────────────────────────────
+.git
+.gitignore
+
+# ── IDE / Editor ──────────────────────────────────────
+.vscode
+.idea
+*.swp
+*.swo
+
+# ── OS files ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docker (avoid recursive copy) ────────────────────
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# ── Env files (injected at runtime, not baked in) ────
+.env*.local
+
+# ── Documentation & metadata ─────────────────────────
+README.md
+DOCKER.md
+GEMINI.README-dashboard.md
+CLAUDE.md
+AGENTS.md
+LICENSE
+
+# ── TypeScript build info ────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Gemini / AI agent data ───────────────────────────
+.gemini
